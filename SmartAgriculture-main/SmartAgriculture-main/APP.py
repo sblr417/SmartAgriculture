@@ -267,11 +267,18 @@ if user_query:
 
                 docs = vectorstore.similarity_search(
                     user_query,
-                    k=5
+                        k=5
                 )
-
+                    
+                st.write("### DEBUG: Retrieved Documents")
+                    
+                for i, doc in enumerate(docs):
+                    st.write(f"Document {i + 1}")
+                    st.write(doc.page_content)
+                    st.write("Metadata:", doc.metadata)
+                    
                 context = "\n\n".join(
-                    [doc.page_content for doc in docs]
+                        [doc.page_content for doc in docs]
                 )
 
             if not docs:
