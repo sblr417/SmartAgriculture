@@ -25,12 +25,16 @@ st.set_page_config(
 
 load_dotenv()
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_API_KEY = st.secrets.get(
+    "OPENROUTER_API_KEY",
+    os.getenv("OPENROUTER_API_KEY", "")
+)
+
+OPENROUTER_API_KEY = OPENROUTER_API_KEY.strip()
 
 if not OPENROUTER_API_KEY:
-    st.error("OPENROUTER_API_KEY not found. Configure it in Streamlit Secrets.")
+    st.error("OpenRouter API key is missing!")
     st.stop()
-
 
 # -------------------------
 # STREAMLIT UI
