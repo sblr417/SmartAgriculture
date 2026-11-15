@@ -154,8 +154,10 @@ def is_restricted(query):
 def generate_answer(query, context):
 
     headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json"
+    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+    "Content-Type": "application/json",
+    "HTTP-Referer": "https://smartagriculture.streamlit.app",
+    "X-OpenRouter-Title": "Smart Agriculture RAG Bot"
     }
 
     prompt = f"""
