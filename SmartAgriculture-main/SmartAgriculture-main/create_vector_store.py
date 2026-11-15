@@ -1,8 +1,10 @@
+
 import os
 
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.documents import Document
+
 from knowledge_base import KNOWLEDGE_BASE
 
 documents = []
@@ -39,20 +41,23 @@ vectorstore = FAISS.from_documents(
 )
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
-
 vector_path = os.path.join(base_dir, "vector_store")
 
 vectorstore.save_local(vector_path)
 
 print("FAISS index generated successfully!")
 
-# Test agriculture definition
-results = vectorstore.similarity_search(
-    "What is agriculture?",
-    k=5
+loaded_store = FAISS.load_local(
+    vector_path,
+    embedding_model,
+    allow_dangerous_deserialization=True
 )
 
-for doc in results:
-    print("ID:", doc.metadata["id"])
-    print("Topic:", doc.metadata["topic"])
-    print("Content:", doc.page_content)
+print("Verified document count:", len(loaded_store.docstore._dict))
+
+found = any(
+    "Agriculture is the practice" in doc.page_content
+    for doc in loaded_store.docstore._dict.values()
+)
+
+print("Agriculture definition present:", found)
