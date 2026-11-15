@@ -1,352 +1,96 @@
-
 import os
-import streamlit as st
 import requests
+import streamlit as st
 from dotenv import load_dotenv
-
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
-
 # -------------------------
-# STREAMLIT CONFIGURATION
+# Configuration
 # -------------------------
-
-st.set_page_config(
-    page_title="Smart Agriculture RAG Bot",
-    page_icon="🌾",
-    layout="wide"
-)
-
-
-# -------------------------
-# LOAD API KEY
-# -------------------------
-
+st.set_page_config(page_title="Smart Agriculture RAG Bot", page_icon="🌾", layout="wide")
 load_dotenv()
 
-OPENROUTER_API_KEY = st.secrets.get(
-    "OPENROUTER_API_KEY",
-    os.getenv("OPENROUTER_API_KEY", "")
-)
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+# Set this in .env to a model currently available in your OpenRouter account.
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-oss-20b")
+VECTOR_STORE_PATH = "vector_store"
+TOP_K = 5
 
-OPENROUTER_API_KEY = OPENROUTER_API_KEY.strip()
+st.title("🌾 Smart Agriculture RAG Bot")
+st.caption("Ask educational questions about crops, soil, irrigation, farm practices and post-harvest processes.")
 
 if not OPENROUTER_API_KEY:
-    st.error("OpenRouter API key is missing!")
+    st.error("OPENROUTER_API_KEY is missing. Add it to your .env file.")
     st.stop()
 
 # -------------------------
-# STREAMLIT UI
+# Load vector store
 # -------------------------
-
-st.title("🌾 Smart Agriculture Crop Process Explainer Bot")
-
-st.markdown(
-    "AI-powered educational assistant for crop lifecycle "
-    "and farming processes."
-)
-
-
-# -------------------------
-# LOAD EMBEDDING MODEL
-# -------------------------
-
-@st.cache_resource
-def load_embedding_model():
-
-    return HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2"
-    )
-
-
-# -------------------------
-# LOAD FAISS VECTOR STORE
-# -------------------------
-
 @st.cache_resource
 def load_vector_store():
-
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-
-    vector_path = os.path.join(
-        base_dir,
-        "vector_store"
-    )
-
-    faiss_file = os.path.join(
-        vector_path,
-        "index.faiss"
-    )
-
-    pkl_file = os.path.join(
-        vector_path,
-        "index.pkl"
-    )
-
-    # Check vector_store folder
-
-    if not os.path.isdir(vector_path):
-        st.error(
-            "Vector store folder is missing. "
-            "Please upload the vector_store folder to GitHub."
-        )
-        st.stop()
-
-    # Check FAISS index file
-
-    if not os.path.isfile(faiss_file):
-        st.error("index.faiss file is missing inside vector_store.")
-        st.stop()
-
-    # Check pickle file
-
-    if not os.path.isfile(pkl_file):
-        st.error("index.pkl file is missing inside vector_store.")
-        st.stop()
-
-    try:
-
-        embedding_model = load_embedding_model()
-
-        vectorstore = FAISS.load_local(
-            vector_path,
-            embedding_model,
-            allow_dangerous_deserialization=True
-        )
-        print("LOADED VECTOR PATH:", vector_path)
-
-        print(
-            "TOTAL INDEXED DOCUMENTS:",
-            len(vectorstore.docstore._dict)
+    if not os.path.exists(os.path.join(VECTOR_STORE_PATH, "index.faiss")):
+        raise FileNotFoundError(
+            "FAISS index not found. Run: python create_vector_store.py"
         )
 
-        for doc in vectorstore.docstore._dict.values():
-            if "Agriculture is the practice" in doc.page_content:
-                print("AGRICULTURE DEFINITION FOUND IN LOADED INDEX!")
-
-        return vectorstore
-
-    except Exception as e:
-
-        st.error(f"FAISS loading failed: {str(e)}")
-        st.stop()
-
-
-vectorstore = load_vector_store()
-# DEBUG: Check loaded FAISS documents
-
-st.write("### FAISS INDEX DEBUG")
-
-st.write(
-    "Total indexed documents:",
-    len(vectorstore.docstore._dict)
-)
-
-found = False
-
-for doc in vectorstore.docstore._dict.values():
-
-    if "Agriculture is the practice" in doc.page_content:
-        found = True
-        st.write("Agriculture definition found!")
-        st.write(doc.page_content)
-        st.write("Metadata:", doc.metadata)
-
-st.write("Agriculture definition present:", found)
-
-# -------------------------
-# SAFETY FILTER
-# -------------------------
-
-def is_restricted(query):
-
-    restricted_terms = [
-        "fertilizer",
-        "chemical dosage",
-        "pesticide amount",
-        "yield prediction",
-        "how much urea",
-        "profit estimate"
-    ]
-
-    return any(
-        term in query.lower()
-        for term in restricted_terms
+    embeddings = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
+    )
+    return FAISS.load_local(
+        VECTOR_STORE_PATH,
+        embeddings,
+        allow_dangerous_deserialization=True,
     )
 
+try:
+    vectorstore = load_vector_store()
+except Exception as exc:
+    st.error(f"Could not load the FAISS index: {exc}")
+    st.stop()
+
+st.sidebar.subheader("Knowledge base status")
+st.sidebar.write(f"Indexed documents: **{vectorstore.index.ntotal}**")
+st.sidebar.write(f"LLM model: `{OPENROUTER_MODEL}`")
+st.sidebar.caption("After changing knowledge_base.py, rebuild the vector store.")
 
 # -------------------------
-# OPENROUTER LLM FUNCTION
+# Retrieve relevant context
 # -------------------------
+def retrieve_documents(question: str):
+    # MMR balances relevance with diversity, helping avoid near-duplicate chunks.
+    return vectorstore.max_marginal_relevance_search(
+        question,
+        k=min(TOP_K, vectorstore.index.ntotal),
+        fetch_k=min(15, vectorstore.index.ntotal),
+        lambda_mult=0.7,
+    )
 
-def generate_answer(query, context):
-
-    headers = {
-    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-    "Content-Type": "application/json",
-    "HTTP-Referer": "https://smartagriculture.streamlit.app",
-    "X-OpenRouter-Title": "Smart Agriculture RAG Bot"
-    }
+# -------------------------
+# Generate answer with OpenRouter
+# -------------------------
+def generate_answer(question: str, docs):
+    context_parts = []
+    for i, doc in enumerate(docs, start=1):
+        context_parts.append(
+            f"[Document {i}]\n"
+            f"Topic: {doc.metadata.get('topic', 'unknown')}\n"
+            f"Content: {doc.page_content}\n"
+            f"Source: {doc.metadata.get('source', 'Not specified')}\n"
+            f"Reference: {doc.metadata.get('url', 'Not specified')}"
+        )
+    context = "\n\n".join(context_parts) if context_parts else "No relevant documents were retrieved."
 
     prompt = f"""
-    You are an agriculture education assistant.
+You are a helpful Smart Agriculture educational assistant.
 
-    Only provide informational explanations.
+Answer the user's agriculture-related question clearly and practically.
+Use the retrieved knowledge-base documents when they are relevant.
 
-    Do NOT provide:
-    - Fertilizer recommendations
-    - Chemical dosage
-    - Pesticide quantity
-    - Yield prediction
-    - Profit estimation
-
-    Use the provided context to answer the question.
-
-    If the context does not contain the answer,
-    clearly mention that the information is not available
-    in the knowledge base.
-
-    Context:
-    {context}
-
-    Question:
-    {query}
-
-    Provide a simple explanation suitable for farmers.
-    """
-
-    data = {
-        "model": "openrouter/free",
-        "messages": [
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        "temperature": 0.3
-    }
-
-    try:
-
-        response = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers=headers,
-            json=data,
-            timeout=30
-        )
-
-        if response.status_code != 200:
-
-            return (
-                f"OpenRouter API Error "
-                f"({response.status_code}): {response.text}"
-            )
-
-        result = response.json()
-
-        if "choices" not in result or not result["choices"]:
-
-            return "Unexpected response from OpenRouter API."
-
-        return result["choices"][0]["message"]["content"]
-
-    except requests.exceptions.Timeout:
-
-        return "The API request timed out. Please try again."
-
-    except requests.exceptions.RequestException as e:
-
-        return f"Network error: {str(e)}"
-
-    except Exception as e:
-
-        return f"System error: {str(e)}"
-
-
-# -------------------------
-# QUERY INTERFACE
-# -------------------------
-
-st.markdown("---")
-
-user_query = st.text_input(
-    "Ask your agriculture-related question:",
-    placeholder="Example: Explain the rice cultivation process"
-)
-
-
-# -------------------------
-# PROCESS USER QUERY
-# -------------------------
-
-if user_query:
-
-    if is_restricted(user_query):
-
-        st.warning(
-            "⚠️ This system provides educational explanations only."
-        )
-
-    else:
-
-        try:
-
-            with st.spinner("🔎 Searching knowledge base..."):
-
-                docs = vectorstore.similarity_search(
-                    user_query,
-                        k=5
-                )
-                    
-                st.write("### DEBUG: Retrieved Documents")
-                    
-                for i, doc in enumerate(docs):
-                    st.write(f"Document {i + 1}")
-                    st.write(doc.page_content)
-                    st.write("Metadata:", doc.metadata)
-                    
-                context = "\n\n".join(
-                        [doc.page_content for doc in docs]
-                )
-
-            if not docs:
-
-                st.warning(
-                    "No relevant information found in the knowledge base."
-                )
-
-            else:
-
-                with st.spinner("🤖 Generating response..."):
-
-                    answer = generate_answer(
-                        user_query,
-                        context
-                    )
-
-                st.success("✅ Answer")
-
-                st.write(answer)
-
-                # -------------------------
-                # DISPLAY SOURCES
-                # -------------------------
-
-                st.markdown("---")
-                st.markdown("### 📖 Sources")
-
-                for doc in docs:
-
-                    source = doc.metadata.get(
-                        "source",
-                        "Knowledge Base"
-                    )
-
-                    st.write(f"- {source}")
-
-        except Exception as e:
-
-            st.error(
-                f"Error while processing your question: {str(e)}"
-            )
+Important rules:
+1. First check whether the retrieved documents contain enough information.
+2. If they do, base the answer on them and do not add unsupported claims.
+3. If they do not contain enough information, you may still give a general educational
+   answer using your general agricultural knowledge. Clearly add this note:
+   "This part is general information and is not covered by the current knowledge base."
+4. Never pretend that general model knowledge came from a retrieved source.
