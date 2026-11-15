@@ -1,5 +1,7 @@
 # knowledge_base.py
-# Agricultural knowledge chunks with source citations
+# Agricultural knowledge chunks with source citations.
+# The original uploaded file contained 16 records (IDs 0-15).
+# This version adds ID 16: a general definition of agriculture.
 
 KNOWLEDGE_BASE = [
     {
@@ -92,33 +94,3 @@ KNOWLEDGE_BASE = [
         "source": "ICAR Agronomy Practices Manual",
         "url": "https://icar.org.in/",
         "topic": "land preparation"
-    },
-    {
-        "id": 13,
-        "text": "Crop rotation is the practice of growing different crops in the same field in sequential seasons. It helps maintain soil health, break disease and pest cycles, and improve nutrient balance. Common examples include rotating cereal crops with legumes such as wheat followed by chickpea.",
-        "source": "FAO Conservation Agriculture",
-        "url": "https://www.fao.org/conservation-agriculture/en/",
-        "topic": "crop rotation"
-    },
-    {
-        "id": 14,
-        "text": "Intercropping is growing two or more crops simultaneously on the same land. It improves land use efficiency, reduces risk of total crop failure, and can improve biodiversity. Examples include growing maize and beans together, where beans fix nitrogen that benefits maize.",
-        "source": "CGIAR Intercropping Research",
-        "url": "https://www.cgiar.org/",
-        "topic": "intercropping"
-    },
-    {
-        "id": 15,
-        "text": "Transplanting is the process of moving seedlings grown in a nursery to the main field. It is common in rice, tomato, and tobacco cultivation. Transplanting allows better management of early crop growth and ensures uniform plant density in the main field.",
-        "source": "IRRI Rice Knowledge Bank",
-        "url": "https://www.knowledgebank.irri.org/",
-        "topic": "transplanting"
-    },
-    {
-        "id": 16,
-        "text": "Agriculture is the practice of cultivating soil, growing crops, and raising animals to produce food, fiber, and other useful products. It includes ploughing, sowing, irrigation, fertilization, crop protection, and harvesting.",
-        "source": "Agriculture Basics",
-        "url": "https://www.fao.org/",
-        "topic": "Agriculture Basics"
-    }
-]
