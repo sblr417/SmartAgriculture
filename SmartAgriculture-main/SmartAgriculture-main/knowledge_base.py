@@ -115,10 +115,10 @@ KNOWLEDGE_BASE = [
         "topic": "transplanting"
     },
     {
-    "id": 16,
-    "text": "Agriculture is the practice of cultivating soil, growing crops, and raising animals to produce food, fiber, and other useful products. It includes ploughing, sowing, irrigation, fertilization, crop protection, and harvesting.",
-    "source": "Agriculture Basics",
-    "url": "https://www.fao.org/",
-    "topic": "Agriculture Basics"
+        "id": 16,
+        "text": "Agriculture is the practice of cultivating soil, growing crops, and raising animals to produce food, fiber, and other useful products. It includes ploughing, sowing, irrigation, fertilization, crop protection, and harvesting.",
+        "source": "Agriculture Basics",
+        "url": "https://www.fao.org/",
+        "topic": "Agriculture Basics"
     }
 ]
