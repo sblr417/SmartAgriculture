@@ -1,4 +1,3 @@
-
 import os
 
 from langchain_community.vectorstores import FAISS
@@ -6,6 +5,8 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 
 import knowledge_base
+
+KNOWLEDGE_BASE = knowledge_base.KNOWLEDGE_BASE
 
 print("Knowledge base file location:")
 print(knowledge_base.__file__)
