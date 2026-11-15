@@ -114,4 +114,39 @@ KNOWLEDGE_BASE = [
         "url": "https://www.knowledgebank.irri.org/",
         "topic": "transplanting"
     },
+    {
+    "id": 16,
+    "text": "Agriculture is the practice of cultivating soil, growing crops, and raising livestock to produce food, fiber, and other useful products. It includes activities such as soil preparation, sowing, irrigation, harvesting, and animal husbandry.",
+    "source": "FAO Agriculture Overview",
+    "url": "https://www.fao.org/",
+    "topic": "agriculture definition"
+    },
+    {
+    "id": 17,
+    "text": "Agriculture is important because it provides food, employment, raw materials for industries, and income for farmers. It also contributes to economic development, food security, and rural livelihoods.",
+    "source": "FAO Agriculture Overview",
+    "url": "https://www.fao.org/",
+    "topic": "importance of agriculture"
+    },
+    {
+    "id": 18,
+    "text": "Major types of agriculture include subsistence farming, commercial farming, intensive farming, extensive farming, mixed farming, and plantation farming. These types differ based on farm size, purpose, resources, and production methods.",
+    "source": "FAO Agriculture Overview",
+    "url": "https://www.fao.org/",
+    "topic": "types of agriculture"
+    },
+    {
+    "id": 19,
+    "text": "Major food crops include rice, wheat, maize, millets, pulses, and potatoes. Cash crops include cotton, sugarcane, tea, coffee, and jute. Different crops require different climatic conditions, soil types, and water availability.",
+    "source": "FAO Crop Information",
+    "url": "https://www.fao.org/land-water/databases-and-software/crop-information/en/",
+    "topic": "types of crops"
+    },
+    {
+    "id": 20,
+    "text": "Soil is the upper layer of the earth where plants grow. Major soil types include sandy soil, clay soil, silt soil, and loamy soil. Loamy soil is generally suitable for many crops because it contains a balanced mixture of sand, silt, clay, and organic matter.",
+    "source": "FAO Soil Resources",
+    "url": "https://www.fao.org/soils-portal/",
+    "topic": "types of soil"
+    }
 ]
