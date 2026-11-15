@@ -5,7 +5,12 @@ from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 
-from knowledge_base import KNOWLEDGE_BASE
+import knowledge_base
+
+print("Knowledge base file location:")
+print(knowledge_base.__file__)
+
+print("Total documents loaded:", len(KNOWLEDGE_BASE))
 
 
 # --------------------------------
