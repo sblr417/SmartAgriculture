@@ -188,7 +188,7 @@ def generate_answer(query, context):
     """
 
     data = {
-        "model": "openai/gpt-3.5-turbo",
+        "model": "openrouter/free",
         "messages": [
             {
                 "role": "user",
