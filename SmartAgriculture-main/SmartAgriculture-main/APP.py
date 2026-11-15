@@ -1,67 +1,3 @@
-import os
-import requests
-import streamlit as st
-from dotenv import load_dotenv
-from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
-
-# -------------------------
-# Configuration
-# -------------------------
-st.set_page_config(page_title="Smart Agriculture RAG Bot", page_icon="🌾", layout="wide")
-load_dotenv()
-
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-# Set this in .env to a model currently available in your OpenRouter account.
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-oss-20b")
-VECTOR_STORE_PATH = "vector_store"
-TOP_K = 5
-
-st.title("🌾 Smart Agriculture RAG Bot")
-st.caption("Ask educational questions about crops, soil, irrigation, farm practices and post-harvest processes.")
-
-if not OPENROUTER_API_KEY:
-    st.error("OPENROUTER_API_KEY is missing. Add it to your .env file.")
-    st.stop()
-
-# -------------------------
-# Load vector store
-# -------------------------
-@st.cache_resource
-def load_vector_store():
-    if not os.path.exists(os.path.join(VECTOR_STORE_PATH, "index.faiss")):
-        raise FileNotFoundError(
-            "FAISS index not found. Run: python create_vector_store.py"
-        )
-
-    embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2"
-    )
-    return FAISS.load_local(
-        VECTOR_STORE_PATH,
-        embeddings,
-        allow_dangerous_deserialization=True,
-    )
-
-try:
-    vectorstore = load_vector_store()
-except Exception as exc:
-    st.error(f"Could not load the FAISS index: {exc}")
-    st.stop()
-
-st.sidebar.subheader("Knowledge base status")
-st.sidebar.write(f"Indexed documents: **{vectorstore.index.ntotal}**")
-st.sidebar.write(f"LLM model: `{OPENROUTER_MODEL}`")
-st.sidebar.caption("After changing knowledge_base.py, rebuild the vector store.")
-
-# -------------------------
-# Retrieve relevant context
-# -------------------------
-def retrieve_documents(question: str):
-    # MMR balances relevance with diversity, helping avoid near-duplicate chunks.
-    return vectorstore.max_marginal_relevance_search(
-        question,
-        k=min(TOP_K, vectorstore.index.ntotal),
         fetch_k=min(15, vectorstore.index.ntotal),
         lambda_mult=0.7,
     )
@@ -94,3 +30,98 @@ Important rules:
    answer using your general agricultural knowledge. Clearly add this note:
    "This part is general information and is not covered by the current knowledge base."
 4. Never pretend that general model knowledge came from a retrieved source.
+5. If the answer depends on crop, location, season, soil, or climate, explain that and
+   ask for the missing details where useful.
+6. Do not invent local recommendations, guaranteed yields, prices, or government schemes.
+7. For pesticide/fertilizer use, do not invent exact chemical doses or mixing instructions.
+   Explain that the product label and local agricultural extension expert should be followed.
+8. Use simple language and headings/bullets when helpful.
+9. Cite the source names from the retrieved documents when you use them.
+
+Retrieved knowledge-base context:
+{context}
+
+User question:
+{question}
+
+Answer:
+"""
+
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": OPENROUTER_MODEL,
+        "messages": [
+            {"role": "system", "content": "You are an accurate, cautious agriculture education assistant."},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.2,
+    }
+
+    try:
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=60,
+        )
+        if response.status_code != 200:
+            try:
+                detail = response.json().get("error", {}).get("message", response.text)
+            except ValueError:
+                detail = response.text
+            return f"OpenRouter API error ({response.status_code}): {detail}"
+
+        result = response.json()
+        choices = result.get("choices", [])
+        if not choices:
+            return f"Unexpected OpenRouter response: {result}"
+        return choices[0]["message"]["content"].strip()
+
+    except requests.RequestException as exc:
+        return f"Could not connect to OpenRouter: {exc}"
+    except (KeyError, TypeError, ValueError) as exc:
+        return f"Could not read the model response: {exc}"
+
+# -------------------------
+# Streamlit chat interface
+# -------------------------
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+question = st.chat_input("Ask any agriculture-related question...")
+
+if question:
+    st.session_state.messages.append({"role": "user", "content": question})
+    with st.chat_message("user"):
+        st.markdown(question)
+
+    with st.chat_message("assistant"):
+        with st.spinner("Searching the agriculture knowledge base..."):
+            docs = retrieve_documents(question)
+
+        with st.spinner("Preparing the answer..."):
+            answer = generate_answer(question, docs)
+
+        st.markdown(answer)
+
+        if docs:
+            with st.expander("Retrieved documents and sources"):
+                for doc in docs:
+                    st.markdown(f"**Topic:** {doc.metadata.get('topic', 'unknown')}")
+                    st.markdown(f"**Source:** {doc.metadata.get('source', 'Not specified')}")
+                    url = doc.metadata.get("url")
+                    if url:
+                        st.markdown(f"[Open reference]({url})")
+                    st.caption(doc.page_content)
+                    st.divider()
+        else:
+            st.info("No documents were retrieved. The answer may rely on general model knowledge.")
+
+    st.session_state.messages.append({"role": "assistant", "content": answer})
