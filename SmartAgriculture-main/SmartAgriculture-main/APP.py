@@ -114,6 +114,16 @@ def load_vector_store():
             embedding_model,
             allow_dangerous_deserialization=True
         )
+        print("LOADED VECTOR PATH:", vector_path)
+
+        print(
+            "TOTAL INDEXED DOCUMENTS:",
+            len(vectorstore.docstore._dict)
+        )
+
+        for doc in vectorstore.docstore._dict.values():
+            if "Agriculture is the practice" in doc.page_content:
+                print("AGRICULTURE DEFINITION FOUND IN LOADED INDEX!")
 
         return vectorstore
 
