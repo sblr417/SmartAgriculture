@@ -267,7 +267,7 @@ if user_query:
 
                 docs = vectorstore.similarity_search(
                     user_query,
-                    k=3
+                    k=5
                 )
 
                 context = "\n\n".join(
