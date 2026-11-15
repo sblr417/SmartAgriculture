@@ -134,7 +134,26 @@ def load_vector_store():
 
 
 vectorstore = load_vector_store()
+# DEBUG: Check loaded FAISS documents
 
+st.write("### FAISS INDEX DEBUG")
+
+st.write(
+    "Total indexed documents:",
+    len(vectorstore.docstore._dict)
+)
+
+found = False
+
+for doc in vectorstore.docstore._dict.values():
+
+    if "Agriculture is the practice" in doc.page_content:
+        found = True
+        st.write("Agriculture definition found!")
+        st.write(doc.page_content)
+        st.write("Metadata:", doc.metadata)
+
+st.write("Agriculture definition present:", found)
 
 # -------------------------
 # SAFETY FILTER
